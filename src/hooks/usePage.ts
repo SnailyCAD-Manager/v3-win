@@ -13,6 +13,6 @@ type PageStore = {
 };
 
 export const usePage = create<PageStore>((set) => ({
-	page: ValidPage.Home,
+	page: ValidPage.Requirements,
 	setPage: (page) => set({ page }),
 }));

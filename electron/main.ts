@@ -23,10 +23,10 @@ function createWindow() {
 	win = new BrowserWindow({
 		icon: path.join(process.env.VITE_PUBLIC, "logo.png"),
 		webPreferences: {
-			preload: path.join(__dirname, "preload.js"),
 			contextIsolation: false,
 		},
 		title: "SnailyCAD Manager v3",
+		autoHideMenuBar: true,
 	});
 
 	// Test active push message to Renderer-process.
@@ -61,6 +61,10 @@ app.on("activate", () => {
 	if (BrowserWindow.getAllWindows().length === 0) {
 		createWindow();
 	}
+});
+
+app.setLoginItemSettings({
+	openAtLogin: true,
 });
 
 app.whenReady().then(createWindow);

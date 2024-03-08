@@ -21,6 +21,7 @@
 				arch: ["x64"],
 			},
 		],
+		icon: "public/logo.png",
 		artifactName: "${productName}-Windows-${version}-Setup.${ext}",
 	},
 	nsis: {
@@ -28,9 +29,5 @@
 		perMachine: false,
 		allowToChangeInstallationDirectory: true,
 		deleteAppDataOnUninstall: false,
-	},
-	linux: {
-		target: ["AppImage"],
-		artifactName: "${productName}-Linux-${version}.${ext}",
 	},
 }
