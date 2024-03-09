@@ -35,6 +35,9 @@ dependencies:
   lucide-react:
     specifier: ^0.350.0
     version: 0.350.0(react@18.2.0)
+  prettier:
+    specifier: ^3.2.5
+    version: 3.2.5
   react:
     specifier: ^18.2.0
     version: 18.2.0
@@ -4037,6 +4040,12 @@ packages:
   /prepend-http@2.0.0:
     resolution: {integrity: sha512-ravE6m9Atw9Z/jjttRUZ+clIXogdghyZAuWJ3qEzjT+jI/dL1ifAqhZeC5VHzQp1MSt1+jxKkFNemj/iO7tVUA==}
     engines: {node: '>=4'}
+    dev: false
+
+  /prettier@3.2.5:
+    resolution: {integrity: sha512-3/GWa9aOC0YeD7LUfvOG2NiDyhOWRvt1k+rcKhOuYnMY24iiCphgneUfJDyFXd6rZCAnuLBv6UeAULtrhT/F4A==}
+    engines: {node: '>=14'}
+    hasBin: true
     dev: false
 
   /process-nextick-args@2.0.1:
