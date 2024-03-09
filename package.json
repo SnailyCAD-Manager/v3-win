@@ -10,9 +10,15 @@
 		"prettier": "prettier --write \"src/**/*.{ts,tsx,html,md}\""
 	},
 	"dependencies": {
+		"@radix-ui/react-dialog": "^1.0.5",
+		"@radix-ui/react-scroll-area": "^1.0.5",
 		"@radix-ui/react-slot": "^1.0.2",
+		"@radix-ui/react-tooltip": "^1.0.7",
+		"@tabler/icons-react": "^2.47.0",
 		"class-variance-authority": "^0.7.0",
 		"clsx": "^2.1.0",
+		"download": "^8.0.0",
+		"kill-port": "^2.0.1",
 		"lucide-react": "^0.350.0",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0",
@@ -21,6 +27,8 @@
 		"zustand": "^4.5.2"
 	},
 	"devDependencies": {
+		"@types/download": "^8.0.5",
+		"@types/kill-port": "^2.0.3",
 		"@types/react": "^18.2.21",
 		"@types/react-dom": "^18.2.7",
 		"@typescript-eslint/eslint-plugin": "^6.6.0",

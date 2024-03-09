@@ -3,8 +3,6 @@ import { ipcRenderer } from "electron";
 import { useEffect, useState } from "react";
 
 export default function RequirementsPage() {
-	const requirements = ["Node.js", "Pnpm", "Git"];
-
 	const [checking, setChecking] = useState(true);
 	const [missing, setMissing] = useState<string[]>(["test", "test", "test"]);
 	const setPage = usePage((state) => state.setPage);
@@ -15,7 +13,7 @@ export default function RequirementsPage() {
 		ipcRenderer.on("requirements-checked", (_, missing: string[]) => {
 			if (missing.length === 0) {
 				setChecking(false);
-				setPage(ValidPage.Home);
+				setPage(ValidPage.Installing);
 				return;
 			}
 

@@ -3,20 +3,17 @@ import ErrorPage from "@/pages/error";
 import HomePage from "@/pages/home";
 import InstallingPage from "@/pages/installing";
 import RequirementsPage from "@/pages/requirements";
+import { TooltipProvider } from "./components/ui/tooltip";
 
 export default function App() {
 	const page = usePage((state) => state.page);
 
-	switch (page) {
-		case Page.Home:
-			return <HomePage />;
-		case Page.Requirements:
-			return <RequirementsPage />;
-		case Page.Installing:
-			return <InstallingPage />;
-		case Page.Error:
-			return <ErrorPage />;
-		default:
-			return <div>Invalid Page</div>;
-	}
+	return (
+		<TooltipProvider>
+			{page === Page.Home && <HomePage />}
+			{page === Page.Requirements && <RequirementsPage />}
+			{page === Page.Installing && <InstallingPage />}
+			{page === Page.Error && <ErrorPage />}
+		</TooltipProvider>
+	);
 }
