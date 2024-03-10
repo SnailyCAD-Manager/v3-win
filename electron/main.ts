@@ -109,7 +109,7 @@ ipcMain.on("check-requirements", async (e) => {
 
 	await Promise.all([check("node"), check("pnpm"), check("git")]);
 
-	e.reply("requirements-checked", []);
+	e.reply("requirements-checked", missing);
 });
 
 ipcMain.on("install", async (e) => {
