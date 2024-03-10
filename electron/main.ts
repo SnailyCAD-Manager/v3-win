@@ -1,9 +1,11 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import killPort from "kill-port";
 import download from "download";
+import axios from "axios";
+import { compareVersions } from "compare-versions";
 
 // The built directory structure
 //
@@ -30,6 +32,8 @@ function createWindow() {
 			contextIsolation: false,
 			nodeIntegration: true,
 		},
+		height: 720,
+		width: 1280,
 		title: "SnailyCAD Manager v3",
 		autoHideMenuBar: true,
 	});
@@ -73,7 +77,7 @@ app.on("activate", () => {
 });
 
 app.setLoginItemSettings({
-	openAtLogin: true,
+	openAtLogin: process.env.NODE_ENV === "production",
 });
 
 app.whenReady().then(createWindow);
@@ -84,7 +88,9 @@ ipcMain.on("check-requirements", async (e) => {
 
 	const check = (command: string) => {
 		return new Promise<void>((resolve) => {
-			const child = spawn(command, ["--version"]);
+			const child = spawn(command, ["--version"], {
+				detached: false,
+			});
 
 			child.on("error", () => {
 				missing.push(command);
@@ -130,7 +136,7 @@ ipcMain.on("install", async (e) => {
 		});
 
 		const settingsExists = fs.existsSync(
-			path.join(installDir, "/app/api/data/settings.json"),
+			path.join(installDir, "/apps/api/data/settings.json"),
 		);
 
 		if (!settingsExists) {
@@ -148,9 +154,13 @@ ipcMain.on("install", async (e) => {
 			return;
 		}
 
+		const fileContent = fs.readFileSync(
+			path.join(installDir, "/apps/api/data/settings.json"),
+			"utf-8",
+		);
 		const settings: {
 			port: number;
-		} = JSON.parse(path.join(installDir, "/app/api/data/settings.json"));
+		} = JSON.parse(fileContent);
 
 		if (!settings.port) {
 			trace.push("Port not found in settings.json");
@@ -170,47 +180,33 @@ ipcMain.on("install", async (e) => {
 		trace.push("Starting the application...");
 		e.reply("install-status", {
 			step: "Starting",
-			status: "Starting the application... -Type: existing",
+			status: "Starting the application...",
 		});
 
-		// Start the application as a child process, make it attached to this process, so when this process is killed, the child process is also killed.
 		const child = spawn("pnpm", ["run", "start"], {
 			cwd: installDir,
-			stdio: "inherit",
+			stdio: "ignore",
 			shell: true,
+			detached: false,
 		});
 
-		child.stdout?.on("data", (data: Buffer | string) => {
-			data = data.toString();
+		await new Promise<void>((resolve) => {
+			const interval = setInterval(async () => {
+				const response = await axios.get(
+					`http://localhost:${settings.port}`,
+				);
 
-			trace.push(data);
-
-			if (data.includes(`Server listening on port ${settings.port}`)) {
-				e.reply("install-status", {
-					step: "Started",
-					status: "Application started successfully",
-				});
-
-				win?.loadURL(`http://localhost:${settings.port}`);
-			}
+				if (response.status === 200) {
+					clearInterval(interval);
+					resolve();
+				}
+			}, 1000);
 		});
 
-		child.stderr?.on("data", (data: Buffer | string) => {
-			data = data.toString();
+		win?.loadURL(`http://localhost:${settings.port}`);
+		win?.show();
 
-			trace.push(data);
-
-			if (data.includes("Error: listen EADDRINUSE")) {
-				e.reply("install-error", {
-					error: "Port in use",
-					trace: [
-						...trace,
-						`Port ${settings.port} is already in use`,
-						"Please close the application using the port and try again.",
-					],
-				});
-			}
-		});
+		startUpdateCheck();
 
 		child.on("error", (error) => {
 			trace.push(error.message);
@@ -239,24 +235,30 @@ ipcMain.on("install", async (e) => {
 	await fs.promises.mkdir(installDir, { recursive: true });
 
 	try {
+		trace.push("Downloading the application...");
+
+		e.reply("install-status", {
+			step: "Downloading",
+			status: "Downloading SnailyCAD Manager...",
+		});
+
 		await download(downloadUrl, installDir, {
 			extract: true,
 		});
 
-		trace.push("Downloaded & extracted the latest release");
+		trace.push("Installing dependencies...");
 
 		e.reply("install-status", {
-			step: "Downloaded",
-			status: "Downloaded & extracted the latest release",
+			step: "Installing Dependencies",
+			status: "Installing dependencies...",
 		});
-
-		trace.push("Installing dependencies...");
 
 		await new Promise<void>((resolve, reject) => {
 			const child = spawn("pnpm", ["install"], {
 				cwd: installDir,
-				stdio: "inherit",
+				stdio: "ignore",
 				shell: true,
+				detached: false,
 			});
 
 			child.stdout?.on("data", (data: Buffer | string) => {
@@ -307,7 +309,7 @@ ipcMain.on("install", async (e) => {
 
 		e.reply("install-status", {
 			step: "Dependencies Installed",
-			status: "Dependencies installed",
+			status: "Dependencies installed.",
 		});
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} catch (error: any) {
@@ -323,68 +325,121 @@ ipcMain.on("install", async (e) => {
 
 	e.reply("install-status", {
 		step: "Starting",
-		status: "Starting the application... -Type: new",
+		status: "Starting the application...",
 	});
 
 	const child = spawn("pnpm", ["run", "start"], {
 		cwd: installDir,
-		stdio: "inherit",
+		stdio: "ignore",
 		shell: true,
+		detached: false,
 	});
 
-	child.stdout?.on("data", (data: Buffer | string) => {
-		data = data.toString();
+	const settingsContent = fs.readFileSync(
+		path.join(installDir, "/apps/api/data/settings.json"),
+		"utf-8",
+	);
 
-		trace.push(data);
+	const settings: {
+		port: number;
+	} = JSON.parse(settingsContent);
 
-		if (data.includes("Server listening on port")) {
-			e.reply("install-status", {
-				step: "Started",
-				status: "Application started successfully",
-			});
+	console.log(`Starting the application on port: ${settings.port}`);
 
-			const settings: {
-				port: number;
-			} = JSON.parse(
-				fs
-					.readFileSync(path.join(installDir, "settings.json"))
-					.toString(),
+	await new Promise<void>((resolve) => {
+		const interval = setInterval(async () => {
+			const response = await axios.get(
+				`http://localhost:${settings.port}`,
 			);
 
-			win?.loadURL(`http://localhost:${settings.port}`);
-		}
-
-		if (data.includes("Error: listen EADDRINUSE")) {
-			e.reply("install-error", {
-				error: "Port in use",
-				trace: [
-					...trace,
-					"Port is already in use",
-					"Please close the application using the port and try again.",
-				],
-			});
-		}
+			if (response.status === 200) {
+				clearInterval(interval);
+				resolve();
+			}
+		}, 1000);
 	});
 
-	child.stderr?.on("data", (data: Buffer | string) => {
-		data = data.toString();
-
-		trace.push(data);
-
-		if (data.includes("Error: listen EADDRINUSE")) {
-			e.reply("install-error", {
-				error: "Port in use",
-				trace: [
-					...trace,
-					"Port is already in use",
-					"Please close the application using the port and try again.",
-				],
-			});
-		}
-	});
+	win?.loadURL(`http://localhost:${settings.port}`);
+	win?.show();
 
 	process.on("exit", async () => {
-		await killPort(3000);
+		await killPort(settings.port);
 		child.kill();
 	});
 });
+
+process.on("exit", async () => {
+	const settingsExists = fs.existsSync(
+		path.join(
+			process.env.APPDATA as string,
+			"scmv3/apps/api/data/settings.json",
+		),
+	);
+
+	if (settingsExists) {
+		const settingsContent = fs.readFileSync(
+			path.join(
+				process.env.APPDATA as string,
+				"scmv3/apps/api/data/settings.json",
+			),
+			"utf-8",
+		);
+
+		const settings: {
+			port: number;
+		} = JSON.parse(settingsContent);
+
+		console.log(`Killing the application on port: ${settings.port}`);
+
+		spawn("npx", ["kill-port", settings.port.toString()], {
+			stdio: "ignore",
+			shell: true,
+			detached: true,
+		}).unref();
+
+		await killPort(settings.port);
+	}
+});
+
+async function startUpdateCheck() {
+	const currentVersion = app.getVersion();
+
+	try {
+		const latestVersion = await axios.get(
+			`https://raw.githubusercontent.com/SnailyCAD-Manager/versions/main/win?v=${Date.now()}`,
+		);
+
+		if (compareVersions(latestVersion.data, currentVersion) === 1) {
+			const alert = await dialog.showMessageBox(win as BrowserWindow, {
+				type: "question",
+				buttons: ["Yes", "No"],
+				defaultId: 0,
+				title: "Update Reminder",
+				message:
+					"An update is available for the application. Would you like to update now?",
+			});
+
+			if (alert.response === 0) {
+				console.log("User wants to update the application");
+			}
+
+			if (alert.response === 1) {
+				console.log("User doesn't want to update the application");
+
+				setTimeout(startUpdateCheck, 1000 * 60 * 60);
+			}
+
+			return;
+		}
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	} catch (error: any) {
+		dialog.showErrorBox(
+			"Update check failed",
+			`An error occurred while checking for updates: ${error.message}`,
+		);
+
+		setTimeout(startUpdateCheck, 1000 * 60 * 60);
+	}
+
+	setTimeout(startUpdateCheck, 1000 * 60 * 60);
+}

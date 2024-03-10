@@ -62,7 +62,9 @@ export default function InstallingPage() {
 				{step !== "Error" && (
 					<>
 						<h1 className="text-2xl font-bold">{step}</h1>
-						<p className="text-muted-foreground">{status}</p>
+						<p className="text-muted-foreground animate-pulse">
+							{status}
+						</p>
 					</>
 				)}
 
